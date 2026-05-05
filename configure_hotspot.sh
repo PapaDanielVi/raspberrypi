@@ -55,9 +55,21 @@ sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak 2>/dev/null || true
 
 sudo tee /etc/dnsmasq.conf > /dev/null <<EOF
 interface=${WLAN_IFACE}
+
+# DHCP range
 dhcp-range=192.168.4.10,192.168.4.100,255.255.255.0,24h
+
+# Force clients to use Pi as DNS + gateway
+dhcp-option=6,192.168.4.1
+dhcp-option=3,192.168.4.1
+
+# DNS behavior
 domain-needed
 bogus-priv
+
+# Logging (optional, useful for debugging)
+log-queries
+log-dhcp
 EOF
 
 # =========================
@@ -117,7 +129,11 @@ sudo iptables -C FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT 2>/dev/null 
 sudo iptables -A FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT
 
 # bypass custom domain server.
-sudo iptables -t nat -A PREROUTING -i wlan0 -p udp --dport 53 -j REDIRECT --to-port 53
+echo "[+] Enforcing DNS redirection..."
+sudo iptables -t nat -C PREROUTING -i ${WLAN_IFACE} -p udp --dport 53 -j REDIRECT --to-port 53 2>/dev/null || \
+sudo iptables -t nat -A PREROUTING -i ${WLAN_IFACE} -p udp --dport 53 -j REDIRECT --to-port 53
+sudo iptables -t nat -C PREROUTING -i ${WLAN_IFACE} -p tcp --dport 53 -j REDIRECT --to-port 53 2>/dev/null || \
+sudo iptables -t nat -A PREROUTING -i ${WLAN_IFACE} -p tcp --dport 53 -j REDIRECT --to-port 53
 
 sudo netfilter-persistent save
 
