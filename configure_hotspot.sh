@@ -38,7 +38,6 @@ echo "[+] Configuring static IP for ${WLAN_IFACE}..."
 
 if ! grep -q "interface ${WLAN_IFACE}" /etc/dhcpcd.conf; then
 sudo tee -a /etc/dhcpcd.conf > /dev/null <<EOF
-
 interface ${WLAN_IFACE}
     static ip_address=192.168.4.1/24
     nohook wpa_supplicant
@@ -56,16 +55,29 @@ sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak 2>/dev/null || true
 sudo tee /etc/dnsmasq.conf > /dev/null <<EOF
 interface=${WLAN_IFACE}
 
+#listen-address=192.168.4.1
+
 # DHCP range
 dhcp-range=192.168.4.10,192.168.4.100,255.255.255.0,24h
 
-# Force clients to use Pi as DNS + gateway
+# Force clients to use Pi as DNS
 dhcp-option=6,192.168.4.1
+
+# Optional: set gateway explicitly
 dhcp-option=3,192.168.4.1
 
 # DNS behavior
 domain-needed
 bogus-priv
+
+#no-resolv
+#server=192.168.1.1
+#bind-interfaces
+
+#server=78.111.11.11
+#server=89.46.219.197
+#server=1.1.1.1
+#server=8.8.8.8
 
 # Logging (optional, useful for debugging)
 log-queries
@@ -132,6 +144,7 @@ sudo iptables -A FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT
 echo "[+] Enforcing DNS redirection..."
 sudo iptables -t nat -C PREROUTING -i ${WLAN_IFACE} -p udp --dport 53 -j REDIRECT --to-port 53 2>/dev/null || \
 sudo iptables -t nat -A PREROUTING -i ${WLAN_IFACE} -p udp --dport 53 -j REDIRECT --to-port 53
+
 sudo iptables -t nat -C PREROUTING -i ${WLAN_IFACE} -p tcp --dport 53 -j REDIRECT --to-port 53 2>/dev/null || \
 sudo iptables -t nat -A PREROUTING -i ${WLAN_IFACE} -p tcp --dport 53 -j REDIRECT --to-port 53
 
