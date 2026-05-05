@@ -116,6 +116,9 @@ sudo iptables -A FORWARD -i ${ETH_IFACE} -o ${WLAN_IFACE} -m state --state RELAT
 sudo iptables -C FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT 2>/dev/null || \
 sudo iptables -A FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT
 
+# bypass custom domain server.
+sudo iptables -t nat -A PREROUTING -i wlan0 -p udp --dport 53 -j REDIRECT --to-port 53
+
 sudo netfilter-persistent save
 
 # =========================
