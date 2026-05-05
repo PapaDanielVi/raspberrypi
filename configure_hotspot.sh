@@ -41,6 +41,10 @@ sudo tee -a /etc/dhcpcd.conf > /dev/null <<EOF
 interface ${WLAN_IFACE}
     static ip_address=192.168.4.1/24
     nohook wpa_supplicant
+
+interface eth0
+static domain_name_servers=192.168.1.1
+noipv6rs
 EOF
 fi
 
@@ -125,6 +129,8 @@ net.ipv4.ip_forward=1
 EOF
 
 sudo sysctl -p /etc/sysctl.d/routed-ap.conf
+
+
 
 # =========================
 # FIREWALL (iptables-nft)
