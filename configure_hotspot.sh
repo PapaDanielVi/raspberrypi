@@ -6,6 +6,7 @@ SSID="RouterAX"
 PASSPHRASE="MK20122013mk"
 WLAN_IFACE="wlan0"
 ETH_IFACE="eth0"
+TUN_IFACE="tun0" # Added VPN interface variable
 COUNTRY="IR"
 CHANNEL="36"
 
@@ -17,12 +18,9 @@ if ! iw list | grep -q "5180 MHz"; then
     echo "[!] WARNING: 5GHz may not be supported on this device!"
 fi
 
-# echo "[+] Setting regulatory domain to ${COUNTRY}..."
-# sudo raspi-config nonint do_wifi_country ${COUNTRY} || true
-
 echo "[+] Installing required packages..."
 sudo apt update
-sudo apt install -y hostapd dnsmasq iptables iptables-persistent
+sudo apt install -y hostapd dnsmasq iptables iptables-persistent iproute2
 
 # =========================
 # STOP SERVICES
@@ -42,7 +40,7 @@ interface ${WLAN_IFACE}
     static ip_address=192.168.4.1/24
     nohook wpa_supplicant
 
-interface eth0
+interface ${ETH_IFACE}
 static domain_name_servers=192.168.1.1
 noipv6rs
 EOF
@@ -59,29 +57,20 @@ sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak 2>/dev/null || true
 sudo tee /etc/dnsmasq.conf > /dev/null <<EOF
 interface=${WLAN_IFACE}
 
-#listen-address=192.168.4.1
-
 # DHCP range
 dhcp-range=192.168.4.10,192.168.4.100,255.255.255.0,24h
 
 # Force clients to use Pi as DNS
 dhcp-option=6,192.168.4.1
-
-# Optional: set gateway explicitly
 dhcp-option=3,192.168.4.1
 
-# DNS behavior
 domain-needed
 bogus-priv
+no-resolv
 
-#no-resolv
-#server=192.168.1.1
-#bind-interfaces
-
-#server=78.111.11.11
-#server=89.46.219.197
-#server=1.1.1.1
-#server=8.8.8.8
+# FORCE DNSMASQ TO ROUTE QUERIES OVER THE VPN TUNNEL TO PREVENT LEAKS
+server=8.8.8.8@${TUN_IFACE}
+server=1.1.1.1@${TUN_IFACE}
 
 # Logging (optional, useful for debugging)
 log-queries
@@ -97,64 +86,80 @@ sudo tee /etc/hostapd/hostapd.conf > /dev/null <<EOF
 interface=${WLAN_IFACE}
 driver=nl80211
 ssid=${SSID}
-
-# 5GHz setup
 hw_mode=a
 channel=${CHANNEL}
 ieee80211n=1
 ieee80211ac=1
-
 country_code=${COUNTRY}
 ieee80211d=1
 ieee80211h=1
-
 wmm_enabled=1
-
 auth_algs=1
 ignore_broadcast_ssid=0
-
 wpa=2
 wpa_passphrase=${PASSPHRASE}
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 EOF
 
-# Link config
 sudo sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
-
 
 echo "[+] Enabling IP forwarding..."
 sudo tee /etc/sysctl.d/routed-ap.conf > /dev/null <<EOF
 net.ipv4.ip_forward=1
 EOF
-
 sudo sysctl -p /etc/sysctl.d/routed-ap.conf
 
-
-
 # =========================
-# FIREWALL (iptables-nft)
+# FIREWALL & NAT (iptables-nft)
 # =========================
-echo "[+] Configuring NAT..."
+echo "[+] Configuring NAT for ${TUN_IFACE}..."
 
-sudo iptables -t nat -C POSTROUTING -o ${ETH_IFACE} -j MASQUERADE 2>/dev/null || \
-sudo iptables -t nat -A POSTROUTING -o ${ETH_IFACE} -j MASQUERADE
+# Route traffic out through the VPN instead of eth0
+sudo iptables -t nat -C POSTROUTING -o ${TUN_IFACE} -j MASQUERADE 2>/dev/null || \
+sudo iptables -t nat -A POSTROUTING -o ${TUN_IFACE} -j MASQUERADE
 
-sudo iptables -C FORWARD -i ${ETH_IFACE} -o ${WLAN_IFACE} -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
-sudo iptables -A FORWARD -i ${ETH_IFACE} -o ${WLAN_IFACE} -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -C FORWARD -i ${TUN_IFACE} -o ${WLAN_IFACE} -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
+sudo iptables -A FORWARD -i ${TUN_IFACE} -o ${WLAN_IFACE} -m state --state RELATED,ESTABLISHED -j ACCEPT
 
-sudo iptables -C FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT 2>/dev/null || \
-sudo iptables -A FORWARD -i ${WLAN_IFACE} -o ${ETH_IFACE} -j ACCEPT
+sudo iptables -C FORWARD -i ${WLAN_IFACE} -o ${TUN_IFACE} -j ACCEPT 2>/dev/null || \
+sudo iptables -A FORWARD -i ${WLAN_IFACE} -o ${TUN_IFACE} -j ACCEPT
 
-# bypass custom domain server.
+# Bypass custom domain server via Pi's local dnsmasq
 echo "[+] Enforcing DNS redirection..."
 sudo iptables -t nat -C PREROUTING -i ${WLAN_IFACE} -p udp --dport 53 -j REDIRECT --to-port 53 2>/dev/null || \
 sudo iptables -t nat -A PREROUTING -i ${WLAN_IFACE} -p udp --dport 53 -j REDIRECT --to-port 53
-
 sudo iptables -t nat -C PREROUTING -i ${WLAN_IFACE} -p tcp --dport 53 -j REDIRECT --to-port 53 2>/dev/null || \
 sudo iptables -t nat -A PREROUTING -i ${WLAN_IFACE} -p tcp --dport 53 -j REDIRECT --to-port 53
 
 sudo netfilter-persistent save
+
+# =========================
+# POLICY-BASED ROUTING
+# =========================
+echo "[+] Setting up routing for route-nopull..."
+
+# Create a custom routing table for VPN traffic if it doesn't exist
+if ! grep -q "200 vpntable" /etc/iproute2/rt_tables; then
+    echo "200 vpntable" | sudo tee -a /etc/iproute2/rt_tables
+fi
+
+# Clean up any old routing rules
+sudo ip rule del from 192.168.4.0/24 table vpntable 2>/dev/null || true
+sudo ip route flush table vpntable 2>/dev/null || true
+
+# Any traffic originating from the hotspot must use the 'vpntable' routing table
+sudo ip rule add from 192.168.4.0/24 table vpntable
+
+# Add the default route to the VPN table (only works if tun0 is active)
+if ip link show ${TUN_IFACE} > /dev/null 2>&1; then
+    sudo ip route add default dev ${TUN_IFACE} table vpntable
+    echo "[✔️] VPN routing configured successfully."
+else
+    echo "[!] WARNING: ${TUN_IFACE} is not currently running!"
+    echo "    Start your OpenVPN connection, then run this command manually:"
+    echo "    sudo ip route add default dev ${TUN_IFACE} table vpntable"
+fi
 
 # =========================
 # ENABLE SERVICES
@@ -174,11 +179,5 @@ sudo systemctl restart dnsmasq
 echo ""
 echo "[✔️] 5GHz Hotspot is ready!"
 echo "SSID: ${SSID}"
-echo "Password: ${PASSPHRASE}"
-echo "Channel: ${CHANNEL}"
+echo "VPN Interface: ${TUN_IFACE}"
 echo ""
-
-echo "[i] If hotspot is not visible:"
-echo " - Ensure country code is set"
-echo " - Try another channel (36, 40, 44, 48)"
-echo " - Check logs: journalctl -u hostapd -f"
