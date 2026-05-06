@@ -56,6 +56,8 @@ sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.bak 2>/dev/null || true
 
 sudo tee /etc/dnsmasq.conf > /dev/null <<EOF
 interface=${WLAN_IFACE}
+listen-address=127.0.0.1,192.168.4.1
+bind-interfaces
 
 # DHCP range
 dhcp-range=192.168.4.10,192.168.4.100,255.255.255.0,24h
@@ -68,13 +70,16 @@ domain-needed
 bogus-priv
 no-resolv
 
-# FORCE DNSMASQ TO ROUTE QUERIES OVER THE VPN TUNNEL TO PREVENT LEAKS
-server=8.8.8.8@${TUN_IFACE}
-server=1.1.1.1@${TUN_IFACE}
+# Standard Upstream DNS (Routing handled by IP routes below)
+server=8.8.8.8
+server=1.1.1.1
 
 # Logging (optional, useful for debugging)
 log-queries
 log-dhcp
+
+# Include directory for your blocker script
+conf-dir=/etc/dnsmasq.d/,*.conf
 EOF
 
 # =========================
