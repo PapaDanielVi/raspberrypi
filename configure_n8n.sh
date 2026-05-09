@@ -32,7 +32,7 @@ fi
 
 # 3. Install Docker & Curl
 echo "[Info] Ensuring Docker and Curl are installed..."
-sudo apt-get update -y && sudo apt-get install -y curl
+sudo apt-get update -y
 if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com | sh
     sudo usermod -aG docker $USER
