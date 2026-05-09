@@ -3,7 +3,7 @@
 set -e
 
 SSID="RouterAX"
-PASSPHRASE="MK20122013mk"
+PASSPHRASE="test_pass"
 WLAN_IFACE="wlan0"
 ETH_IFACE="eth0"
 TUN_IFACE="tun0" # Added VPN interface variable
