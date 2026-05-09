@@ -56,6 +56,7 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
   },
   "agents": {
     "defaults": {
+      "timeoutSeconds": 3600,
       "model": {
         "primary": "ollama/phi3:latest"
       }
