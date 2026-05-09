@@ -101,6 +101,7 @@ sudo docker run -d \
   --name n8n \
   --restart always \
   -p 5678:5678 \
+  -e N8N_SECURE_COOKIE=false \
   --add-host=host.docker.internal:host-gateway \
   -v n8n_data:/home/node/.n8n \
   docker.n8n.io/n8nio/n8n
