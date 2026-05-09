@@ -40,12 +40,27 @@ fi
 
 # 5. Configure Ollama network access for Docker
 echo "[Info] Configuring Ollama to accept connections from Docker..."
-sudo mkdir -p /etc/systemd/system/ollama.service.d
-echo -e '[Service]\nEnvironment="OLLAMA_HOST=0.0.0.0"' | sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null
+sudo tee /etc/systemd/system/ollama.service <<EOF
+[Unit]
+Description=Ollama Service
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/ollama serve
+User=$USER
+Group=$USER
+Restart=always
+RestartSec=3
+Environment="OLLAMA_HOST=0.0.0.0"
+
+[Install]
+WantedBy=default.target
+EOF
 
 echo "[Info] Restarting Ollama service to apply changes..."
 sudo systemctl daemon-reload
-sudo systemctl restart ollama
+sudo systemctl enable ollama
+sudo systemctl start ollama
 
 # Give Ollama a few seconds to fully boot up
 sleep 5
