@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-USE_PROXY=true
+USE_PROXY=false
 PROXY_URL="http://192.168.1.94:8118"
 
 # Exit immediately if any command fails
