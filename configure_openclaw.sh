@@ -43,6 +43,7 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
       "ollama": {
         "baseUrl": "http://localhost:11434",
         "apiKey": "ollama-local",
+        "timeoutSeconds": 172800,
         "models": [
           {
             "id": "phi3:latest",
@@ -56,7 +57,7 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
   },
   "agents": {
     "defaults": {
-      "timeoutSeconds": 3600,
+      "timeoutSeconds": 172800,
       "model": {
         "primary": "ollama/phi3:latest"
       }
