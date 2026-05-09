@@ -41,18 +41,23 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
   "models": {
     "providers": {
       "ollama": {
-        "baseUrl": "http://127.0.0.1:11434",
-        "apiKey": "ollama",
-        "api": "ollama",
-        "models": [{"name":"phi3","id":"ollama-phi3"}]
+        "baseUrl": "http://localhost:11434",
+        "apiKey": "ollama-local",
+        "models": [
+          {
+            "id": "phi3:latest",
+            "name": "Phi-3 (Local)",
+            "contextWindow": 8192,
+            "maxTokens": 4096
+          }
+        ]
       }
     }
   },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "ollama/phi3",
-        "fallbacks": ["ollama/phi3"]
+        "primary": "ollama/phi3:latest"
       }
     }
   }
