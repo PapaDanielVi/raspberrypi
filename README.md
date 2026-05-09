@@ -23,5 +23,11 @@ this repo contain a few bash scripts to help you configure your raspberry pi5
 ## Filter domains script
 
 ```bash
-./filter-domains.sh
+./filter_domains.sh
+```
+
+## Openclaw configure script run phi3 model in ollama
+
+```bash
+./configure_openclaw.sh
 ```
