@@ -41,8 +41,8 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
   "models": {
     "providers": {
       "ollama": {
-        "baseUrl": "http://localhost:11434",
-        "apiKey": "ollama-local",
+        "baseUrl": "http://host.docker.internal:11434",
+        "apiKey": "dummy",
         "timeoutSeconds": 172800,
         "models": [
           {
@@ -73,7 +73,9 @@ docker run -d \
   -e HTTP_PROXY="http://192.168.1.94:8118" \
   -e HTTPS_PROXY="http://192.168.1.94:8118" \
   -e OPENCLAW_GATEWAY_TOKEN=$OPENCLAW_GATEWAY_TOKEN \
+  -e OLLAMA_API_KEY=dummy \
   -e NO_PROXY="localhost,127.0.0.1,192.168.1.*" \
+  --add-host=host.docker.internal:host-gateway \
   -v ~/.openclaw:/home/node/.openclaw \
   --restart unless-stopped \
   ghcr.io/openclaw/openclaw:latest
