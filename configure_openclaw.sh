@@ -48,8 +48,8 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
           {
             "id": "phi3:latest",
             "name": "Phi-3 (Local)",
-            "contextWindow": 8192,
-            "maxTokens": 4096
+            "contextWindow": 8000,
+            "maxTokens": 256
           }
         ]
       }
@@ -59,7 +59,7 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
     "defaults": {
       "timeoutSeconds": 172800,
       "model": {
-        "primary": "ollama/phi3:latest"
+        "primary": "phi3:latest"
       }
     }
   }

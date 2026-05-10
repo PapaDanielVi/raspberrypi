@@ -69,7 +69,7 @@ RestartSec=3
 Environment="OLLAMA_NUM_PARALLEL=1"
 Environment="OLLAMA_MAX_LOADED_MODELS=1"
 Environment="OLLAMA_KEEP_ALIVE=0"
-Environment="OLLAMA_NUM_THREAD=3"
+Environment="OLLAMA_NUM_THREAD=2"
 Environment="OLLAMA_DEBUG=1"
 Environment="OLLAMA_LOAD_TIMEOUT=3600"
 Environment="OLLAMA_DEBUG_LOG_REQUESTS=true"
