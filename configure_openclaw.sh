@@ -41,9 +41,9 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
   "models": {
     "providers": {
       "ollama": {
-        "baseUrl": "http://host.docker.internal:11434",
+        "baseUrl": "http://host.docker.internal:11434/v1",
         "apiKey": "dummy",
-        "timeoutSeconds": 172800,
+        "timeoutSeconds": 300,
         "models": [
           {
             "id": "phi3:latest",
@@ -55,9 +55,22 @@ sudo tee ~/.openclaw/openclaw.json <<EOF > /dev/null
       }
     }
   },
+  "skills": {
+    "allowBundled": [],
+    "entries": {}
+  },
+  "tools": {
+    "allow": [],
+    profile: "minimal",
+  },
   "agents": {
+    "list": [],
     "defaults": {
-      "timeoutSeconds": 172800,
+      "timeoutSeconds": 300,
+      "heartbeat": {
+        "every": "0m",
+      },
+      "skills": [],
       "model": {
         "primary": "phi3:latest"
       }
